@@ -37,18 +37,21 @@ class Gm_Magazine_Collection
   				$this,
   				'uninstall'
   		) );*/
-
-      //add to sttyles
-      add_action('admin_enqueue_scripts', array($this,'load_libreries'));
-  		// init custom post types & taxonomies
   		add_action ( 'init', array (
   				$this,
   				'init'
   		) );
+      //add to sttyles
+      add_action('admin_enqueue_scripts', array($this,'load_libreries'));
+
+      // init custom post types & taxonomies
       add_action ( 'save_post_' . self::SLUG, array (
   				$this,
   				'savePost'
   		), 10, 3 );
+
+      //add shorcode
+      add_shortcode('gmm_magazine_list_category', array($this, 'doShortCode'));
   }
 
   public function init(){
@@ -150,7 +153,43 @@ class Gm_Magazine_Collection
     }
   }
 
+  /*Add shorcode*/
+  public function doShortCode($atts = false) {
+    $galleryID = 'la-familia-luchona';
+    global $post;
+    $term = get_term_by('slug', ($galleryID), self::SLUG.'_category');
 
+    $magazine_list = new WP_Query ( array (
+        'post_type' => self::SLUG,
+        'post_status' => 'publish',
+        'orderby' => 'meta_value_num',
+        //'order' => $array['wb_is_reversed']?'ASC':'DESC',
+        'nopaging'=>true,
+        //'meta_key' => 'sortorder' . $term->term_id,
+        'tax_query' => array(
+            array(
+                'taxonomy' => self::SLUG . '_category',
+                'terms'    => $term->slug,
+                'field'    => 'slug',
+            ),
+        ),
+    ) );
+    /*$category_name = '';
+    extract ( shortcode_atts ( array (
+        'category_name' => ''
+    ), $atts ) );*/
+    //$html = $this->getContent($category_name);
+    $html  = "<h2>Categoría</h2>";
+    $html .= json_encode($term);
+    $html .= "<h3>Resultados</h3>";
+    //$html .= json_encode($magazine_list->posts);
+    foreach ($magazine_list->posts as  $post) {
+      $html .= json_encode($post);
+      $html .= "<h4>Post meta </h4>";
+      $html .= esc_attr ( get_post_meta ( $post->ID, 'pdf_url', true ) );
+    }
+    return $html;
+  }
 
   /**
 	 * Activation function
