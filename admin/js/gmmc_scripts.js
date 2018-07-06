@@ -1,9 +1,11 @@
-jQuery(document).ready(function(){
+jQuery(document).ready(function($){
   /*var button = $("#gmm_btn_select_pdf_file");
   button.on('click', function(e){
     e.preventDefault();
     console.log("Estamos seleccionando un archivo");
   });*/
+
+  console.log("########### JQUERY LOAD ##################");
 
   var $marco;
   $btnMarco = $("#gmm_btn_select_pdf_file");

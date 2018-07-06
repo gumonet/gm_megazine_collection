@@ -80,7 +80,7 @@ class Gm_Magazine_Collection
 				'supports' => array (
 						'title',
 						'editor',
-						//'custom-fields'
+						'thumbnail'
 				),
 				'has_archive' => false,
 				'register_meta_box_cb' => array (
@@ -155,9 +155,17 @@ class Gm_Magazine_Collection
 
   /*Add shorcode*/
   public function doShortCode($atts = false) {
-    $galleryID = 'la-familia-luchona';
-    global $post;
-    $term = get_term_by('slug', ($galleryID), self::SLUG.'_category');
+      global $post, $count;
+      if ($count == null)
+          $count = 0;
+      $count ++;
+
+    $gallery_slug = '';
+      extract ( shortcode_atts ( array (
+          'gallery_slug' => ''
+      ), $atts ) );
+
+    $term = get_term_by('slug', ($gallery_slug), self::SLUG.'_category');
 
     $magazine_list = new WP_Query ( array (
         'post_type' => self::SLUG,
@@ -174,20 +182,64 @@ class Gm_Magazine_Collection
             ),
         ),
     ) );
-    /*$category_name = '';
-    extract ( shortcode_atts ( array (
-        'category_name' => ''
-    ), $atts ) );*/
-    //$html = $this->getContent($category_name);
-    $html  = "<h2>Categoría</h2>";
-    $html .= json_encode($term);
-    $html .= "<h3>Resultados</h3>";
+
+      $html = '';
+  /*********************
+   *     PAGINATION    *
+   *********************/
+      $index = 1;
+      $page_len = 3;
+      $page_id = isset($_GET['wb_video_page_id'])?intval($_GET['wb_video_page_id']):0;
+      $pages = 1;
+
+      $paging_html = '';
+      $list = array();
+      if ($page_len <= 0) {
+          $list = $magazine_list->posts;
+      } else {
+          $records = sizeof($magazine_list->posts);
+          $pages = ceil($records/$page_len);
+          $page_id = max(0, min($pages-1, $page_id));
+          for ($i = $page_id*$page_len; $i<($page_id+1)*$page_len; $i++) {
+              if (isset($magazine_list->posts[$i]))
+                  $list[] = $magazine_list->posts[$i];
+          }
+
+          if ($pages > 1) {
+              $paging_html .= '<div class="wb_video_pager"> Page: ';
+
+              $aPages = array();
+              for($i = 0; $i<$pages; $i++) {
+                  $aPages[] = ($i == $page_id)?'<a href="'.get_permalink($post->ID).'?wb_video_page_id='.$i.'"><span>['.($i+1).']</span></a>':'<a href="'.get_permalink($post->ID).'?wb_video_page_id='.$i.'">'.($i+1).'</a>';
+              }
+
+              $paging_html.= implode(' | ', $aPages);
+              $paging_html.= '</div>';
+          }
+      }
+
+
+
+   //$html  = "<h2>Categoría</h2>";
+   // $html .= json_encode($term);
+   // $html .= "<h3>Resultados</h3>";
     //$html .= json_encode($magazine_list->posts);
-    foreach ($magazine_list->posts as  $post) {
-      $html .= json_encode($post);
-      $html .= "<h4>Post meta </h4>";
-      $html .= esc_attr ( get_post_meta ( $post->ID, 'pdf_url', true ) );
+    foreach ($list as  $post) {
+        $thumnail = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'single-post-thumbnail' );
+        $html .='<div class="gmmc_item_content">';
+        $html .='	<div class="gmmc_thumnail">';
+        $html .='		<img src="'.$thumnail[0].'" alt=""> ';
+        $html .='	</div>';
+        $html .='    <h3>'.get_the_title($post->ID).'</h3>';
+        $html .='	<a href="'.esc_attr ( get_post_meta ( $post->ID, 'pdf_url', true )) .'" target="_blank" >Descargar</a>';
+        $html .='</div>';
+      //$html .= json_encode($post);
+      //$html .= "<h4>Post meta </h4>";
+      //$html .= esc_attr ( get_post_meta ( $post->ID, 'pdf_url', true ) );
+      //$html .='<hr>';
     }
+
+      $html.= $paging_html;
     return $html;
   }
 
